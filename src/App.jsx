@@ -13,27 +13,27 @@ import {
   Legend,
 } from "recharts";
 
-const API_BASE =
-  import.meta.env.VITE_API_BASE || "http://127.0.0.1:8000/api";
-
+const API_BASE = "http://127.0.0.1:8000/api";
+const API_BASE_URL = "https://inventory-backend-1-kcep.onrender.com/api";
 
 function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [theme, setTheme] = useState("dark");
 
+  // auth
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const [username, setUsername] = useState(localStorage.getItem("username") || "");
   const [role, setRole] = useState(localStorage.getItem("role") || "User");
   const isAuthenticated = !!token;
 
-
+  // data
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [orders, setOrders] = useState([]);
 
-
+  // ui + forms
   const [searchTerm, setSearchTerm] = useState("");
   const [editingProduct, setEditingProduct] = useState(null);
 
@@ -58,6 +58,7 @@ function App() {
     status: "pending",
   });
 
+  // persist auth
   useEffect(() => {
     if (token) {
       localStorage.setItem("token", token);
@@ -70,13 +71,14 @@ function App() {
     }
   }, [token, username, role]);
 
+  // helper fetch
   const authFetch = (url, options = {}) => {
     const headers = options.headers ? { ...options.headers } : {};
     if (token) headers["Authorization"] = `Token ${token}`;
     return fetch(url, { ...options, headers });
   };
 
-
+  // load data when logged in
   useEffect(() => {
     if (!token) {
       setProducts([]);
@@ -124,7 +126,7 @@ function App() {
     fetchAll();
   }, [token]);
 
-
+  // stats
   const totalProducts = products.length;
   const totalSuppliers = suppliers.length;
   const lowStockCount = products.filter((p) => p.stock <= p.reorder_level).length;
@@ -134,7 +136,7 @@ function App() {
   const completedOrders = orders.filter((o) => o.status === "completed").length;
   const cancelledOrders = orders.filter((o) => o.status === "cancelled").length;
 
-
+  // product handlers
   const handleAddProduct = async (e) => {
     e.preventDefault();
     setError("");
@@ -226,6 +228,7 @@ function App() {
     }
   };
 
+  // supplier handlers
   const handleAddSupplier = async (e) => {
     e.preventDefault();
     setError("");
@@ -314,7 +317,7 @@ function App() {
       p.sku.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-
+  // not logged in → centered login
   if (!isAuthenticated) {
     return (
       <div className={`app ${theme}`}>
@@ -341,7 +344,7 @@ function App() {
     );
   }
 
-
+  // logged in
   return (
     <div className={`app ${theme}`}>
       {/* Sidebar */}
@@ -500,8 +503,9 @@ function App() {
   );
 }
 
+/* ---------------- LOGIN FORM ---------------- */
 
-function LoginForm({ setToken, setUsername, setRole, setError, }) {
+function LoginForm({ setToken, setUsername, setRole, setError, theme, setTheme }) {
   const [usernameInput, setUsernameInput] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
@@ -606,10 +610,18 @@ function LoginForm({ setToken, setUsername, setRole, setError, }) {
           : "Don’t have an account? Register"}
       </button>
 
+      <button
+        className="theme-toggle"
+        style={{ marginTop: 6 }}
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      >
+        {theme === "dark" ? "🌞 Light Mode" : "🌙 Dark Mode"}
+      </button>
     </>
   );
 }
 
+/* ---------------- NAVBAR ---------------- */
 
 function Navbar({ username, role, theme, setTheme, onLogout, onProfileClick }) {
   const [open, setOpen] = useState(false);
@@ -674,7 +686,7 @@ function Navbar({ username, role, theme, setTheme, onLogout, onProfileClick }) {
   );
 }
 
-
+/* ---------------- OVERVIEW ---------------- */
 
 function Overview({
   products,
@@ -811,7 +823,7 @@ function SummaryCard({ label, value, highlight }) {
   );
 }
 
-
+/* ---------------- PRODUCTS TAB ---------------- */
 
 function ProductsTab({
   products,
@@ -891,8 +903,8 @@ function ProductsTab({
                     </span>
                   </td>
                   <td>
-                    <button onClick={() => setEditingProduct(p)}>Edit</button>
-                    <button onClick={() => handleDeleteProduct(p.id)}>Delete</button>
+                    <button onClick={() => setEditingProduct(p)}>✏️</button>
+                    <button onClick={() => handleDeleteProduct(p.id)}>🗑️</button>
                   </td>
                 </tr>
               );
@@ -1033,7 +1045,7 @@ function ProductsTab({
   );
 }
 
-
+/* ---------------- SUPPLIERS TAB ---------------- */
 
 function SuppliersTab({ suppliers, newSupplier, setNewSupplier, handleAddSupplier }) {
   return (
@@ -1111,7 +1123,7 @@ function SuppliersTab({ suppliers, newSupplier, setNewSupplier, handleAddSupplie
   );
 }
 
-
+/* ---------------- ORDERS TAB ---------------- */
 
 function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) {
   return (
@@ -1230,7 +1242,7 @@ function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) 
   );
 }
 
-
+/* ---------------- PROFILE TAB ---------------- */
 
 function ProfileTab({ authFetch }) {
   const [profile, setProfile] = useState({
@@ -1377,7 +1389,7 @@ function ProfileTab({ authFetch }) {
   );
 }
 
-
+/* ---------------- USERS TAB (ADMIN) ---------------- */
 
 function UsersTab({ authFetch }) {
   const [users, setUsers] = useState([]);
@@ -1440,6 +1452,7 @@ function UsersTab({ authFetch }) {
   );
 }
 
+/* ---------------- RECENT ACTIVITY ---------------- */
 
 function RecentActivity({ products, orders, suppliers }) {
   return (
@@ -1447,7 +1460,7 @@ function RecentActivity({ products, orders, suppliers }) {
       <h3>Recent Activity</h3>
 
       <div className="activity-section">
-        <p className="activity-title">Latest Products</p>
+        <p className="activity-title">🆕 Latest Products</p>
         {products
           .slice(-3)
           .reverse()
@@ -1460,7 +1473,7 @@ function RecentActivity({ products, orders, suppliers }) {
       </div>
 
       <div className="activity-section">
-        <p className="activity-title">Latest Orders</p>
+        <p className="activity-title">📦 Latest Orders</p>
         {orders
           .slice(-3)
           .reverse()
@@ -1473,7 +1486,7 @@ function RecentActivity({ products, orders, suppliers }) {
       </div>
 
       <div className="activity-section">
-        <p className="activity-title">Latest Suppliers</p>
+        <p className="activity-title">🏭 Latest Suppliers</p>
         {suppliers
           .slice(-3)
           .reverse()
