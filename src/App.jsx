@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import {
   BarChart,
@@ -57,11 +57,15 @@ function App() {
     status: "pending",
   });
 
-  // Sidebar local state: expanded lists + selected quick item
+  // Sidebar quick list state
   const [sidebarOpenProducts, setSidebarOpenProducts] = useState(true);
   const [sidebarOpenSuppliers, setSidebarOpenSuppliers] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [selectedSupplierId, setSelectedSupplierId] = useState(null);
+
+  // new: open add flags (used to auto-focus and ensure add form is shown)
+  const [openAddProduct, setOpenAddProduct] = useState(false);
+  const [openAddSupplier, setOpenAddSupplier] = useState(false);
 
   // persist auth
   useEffect(() => {
@@ -76,7 +80,7 @@ function App() {
     }
   }, [token, username, role]);
 
-  // helper fetch
+  // helper fetch with token
   const authFetch = (url, options = {}) => {
     const headers = options.headers ? { ...options.headers } : {};
     if (token) headers["Authorization"] = `Token ${token}`;
@@ -127,27 +131,26 @@ function App() {
     fetchAll();
   }, [token]);
 
-  // reopen product in edit panel when selectedProductId changes
+  // handle quick selection: open product in edit panel
   useEffect(() => {
     if (selectedProductId == null) return;
     const p = products.find((x) => x.id === selectedProductId);
     if (p) {
       setActiveTab("products");
       setEditingProduct(p);
-      // clear selection after opening
+      setOpenAddProduct(false);
       setSelectedProductId(null);
     }
   }, [selectedProductId, products]);
 
-  // open supplier in profile/ suppliers tab when selectedSupplierId changes
+  // handle quick selection: open supplier in suppliers tab (prefill edit)
   useEffect(() => {
     if (selectedSupplierId == null) return;
     const s = suppliers.find((x) => x.id === selectedSupplierId);
     if (s) {
       setActiveTab("suppliers");
-      // We don't have a supplier edit form in the UI by default; set a temporary highlight using state
-      // For simplicity we'll set newSupplier to selected supplier when opening suppliers tab so the right details show
-      setNewSupplier({ name: s.name, contact: s.contact, email: s.email, id: s.id });
+      setNewSupplier({ id: s.id, name: s.name, contact: s.contact, email: s.email });
+      setOpenAddSupplier(false);
       setSelectedSupplierId(null);
     }
   }, [selectedSupplierId, suppliers]);
@@ -196,6 +199,11 @@ function App() {
         reorder_level: "",
         supplier_id: "",
       });
+
+      // close add mode
+      setOpenAddProduct(false);
+      // go to products tab
+      setActiveTab("products");
     } catch (err) {
       console.error(err);
       setError("Could not create product.");
@@ -280,6 +288,7 @@ function App() {
         const data = await res.json();
         setSuppliers((prev) => prev.map((s) => (s.id === data.id ? data : s)));
         setNewSupplier({ name: "", contact: "", email: "" });
+        setOpenAddSupplier(false);
         return;
       }
 
@@ -297,6 +306,7 @@ function App() {
       const data = await res.json();
       setSuppliers((prev) => [...prev, data]);
       setNewSupplier({ name: "", contact: "", email: "" });
+      setOpenAddSupplier(false);
     } catch (err) {
       console.error(err);
       setError("Could not create/update supplier.");
@@ -417,6 +427,20 @@ function App() {
                 Products
               </button>
 
+              {/* Add product button in sidebar */}
+              <button
+                className="sidebar-add-btn"
+                onClick={() => {
+                  // prepare add product form
+                  setEditingProduct(null);
+                  setNewProduct({ name: "", sku: "", stock: "", reorder_level: "", supplier_id: "" });
+                  setActiveTab("products");
+                  setOpenAddProduct(true);
+                }}
+              >
+                ＋ Add product
+              </button>
+
               {/* QUICK PRODUCTS LIST */}
               <div className="sidebar-list">
                 <div
@@ -438,7 +462,6 @@ function App() {
                           className="sidebar-item-btn"
                           title={`${p.name} — stock: ${p.stock}`}
                           onClick={() => {
-                            // open product in edit
                             setSelectedProductId(p.id);
                           }}
                         >
@@ -468,6 +491,19 @@ function App() {
                 onClick={() => setActiveTab("suppliers")}
               >
                 Suppliers
+              </button>
+
+              {/* Add supplier button in sidebar */}
+              <button
+                className="sidebar-add-btn"
+                onClick={() => {
+                  // prepare add supplier form
+                  setNewSupplier({ name: "", contact: "", email: "" });
+                  setActiveTab("suppliers");
+                  setOpenAddSupplier(true);
+                }}
+              >
+                ＋ Add supplier
               </button>
 
               {/* QUICK SUPPLIERS LIST */}
@@ -597,6 +633,8 @@ function App() {
               suppliers={suppliers}
               lowStockCount={lowStockCount}
               totalStockQty={totalStockQty}
+              openAdd={openAddProduct}
+              setOpenAdd={setOpenAddProduct}
             />
           )}
 
@@ -606,6 +644,8 @@ function App() {
               newSupplier={newSupplier}
               setNewSupplier={setNewSupplier}
               handleAddSupplier={handleAddSupplier}
+              openAdd={openAddSupplier}
+              setOpenAdd={setOpenAddSupplier}
             />
           )}
 
@@ -905,7 +945,23 @@ function ProductsTab({
   suppliers,
   lowStockCount,
   totalStockQty,
+  openAdd,
+  setOpenAdd,
 }) {
+  const firstInputRef = useRef();
+
+  // when openAdd becomes true, ensure add form is active and focus the name input
+  useEffect(() => {
+    if (openAdd) {
+      setEditingProduct(null); // ensure not editing
+      setTimeout(() => {
+        try {
+          firstInputRef.current?.focus();
+        } catch (e) {}
+      }, 50);
+    }
+  }, [openAdd, setEditingProduct]);
+
   return (
     <div className="split">
       <div className="card">
@@ -976,10 +1032,21 @@ function ProductsTab({
 
       <div className="card">
         <h3>{editingProduct ? "Edit Product" : "Add Product"}</h3>
-        <form className="form" onSubmit={editingProduct ? handleUpdateProduct : handleAddProduct}>
+        <form
+          className="form"
+          onSubmit={editingProduct ? handleUpdateProduct : handleAddProduct}
+          onKeyDown={(e) => {
+            // pressing Escape cancels add/edit
+            if (e.key === "Escape") {
+              setEditingProduct(null);
+              setOpenAdd(false);
+            }
+          }}
+        >
           <label>
             Name
             <input
+              ref={firstInputRef}
               value={editingProduct ? editingProduct.name : newProduct.name}
               onChange={(e) =>
                 editingProduct ? setEditingProduct({ ...editingProduct, name: e.target.value }) : setNewProduct({ ...newProduct, name: e.target.value })
@@ -1048,20 +1115,45 @@ function ProductsTab({
             </select>
           </label>
 
-          <button className="primary-btn">{editingProduct ? "Update Product" : "Save Product"}</button>
-
-          {editingProduct && (
-            <button type="button" className="primary-btn" onClick={() => setEditingProduct(null)} style={{ background: "#374151", color: "white" }}>
-              Cancel
-            </button>
-          )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="primary-btn">{editingProduct ? "Update Product" : "Save Product"}</button>
+            {(editingProduct || openAdd) && (
+              <button
+                type="button"
+                className="primary-btn"
+                onClick={() => {
+                  setEditingProduct(null);
+                  setOpenAdd(false);
+                }}
+                style={{ background: "#374151", color: "white" }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </div>
     </div>
   );
 }
 
-function SuppliersTab({ suppliers, newSupplier, setNewSupplier, handleAddSupplier }) {
+/* ---------------- SUPPLIERS TAB ---------------- */
+
+function SuppliersTab({ suppliers, newSupplier, setNewSupplier, handleAddSupplier, openAdd, setOpenAdd }) {
+  const firstInputRef = useRef();
+
+  useEffect(() => {
+    if (openAdd) {
+      // ensure we're in add mode (clear id if present)
+      setNewSupplier((cur) => ({ name: cur.name || "", contact: cur.contact || "", email: cur.email || "" }));
+      setTimeout(() => {
+        try {
+          firstInputRef.current?.focus();
+        } catch (e) {}
+      }, 50);
+    }
+  }, [openAdd, setNewSupplier]);
+
   return (
     <div className="split">
       <div className="card">
@@ -1095,10 +1187,24 @@ function SuppliersTab({ suppliers, newSupplier, setNewSupplier, handleAddSupplie
 
       <div className="card">
         <h3>{newSupplier.id ? "Edit Supplier" : "Add Supplier"}</h3>
-        <form className="form" onSubmit={handleAddSupplier}>
+        <form
+          className="form"
+          onSubmit={handleAddSupplier}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setNewSupplier({ name: "", contact: "", email: "" });
+              setOpenAdd(false);
+            }
+          }}
+        >
           <label>
             Name
-            <input value={newSupplier.name} onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })} placeholder="Supplier name" />
+            <input
+              ref={firstInputRef}
+              value={newSupplier.name}
+              onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })}
+              placeholder="Supplier name"
+            />
           </label>
 
           <label>
@@ -1113,12 +1219,15 @@ function SuppliersTab({ suppliers, newSupplier, setNewSupplier, handleAddSupplie
 
           <div style={{ display: "flex", gap: 8 }}>
             <button className="primary-btn">{newSupplier.id ? "Update Supplier" : "Save Supplier"}</button>
-            {newSupplier.id && (
+            {(newSupplier.id || openAdd) && (
               <button
                 type="button"
                 className="primary-btn"
                 style={{ background: "#374151", color: "white" }}
-                onClick={() => setNewSupplier({ name: "", contact: "", email: "" })}
+                onClick={() => {
+                  setNewSupplier({ name: "", contact: "", email: "" });
+                  setOpenAdd(false);
+                }}
               >
                 Cancel
               </button>
@@ -1129,6 +1238,8 @@ function SuppliersTab({ suppliers, newSupplier, setNewSupplier, handleAddSupplie
     </div>
   );
 }
+
+/* ---------------- ORDERS TAB ---------------- */
 
 function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) {
   return (
@@ -1210,6 +1321,8 @@ function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) 
     </div>
   );
 }
+
+/* ---------------- PROFILE ---------------- */
 
 function ProfileTab({ authFetch }) {
   const [profile, setProfile] = useState({
@@ -1329,6 +1442,8 @@ function ProfileTab({ authFetch }) {
   );
 }
 
+/* ---------------- USERS ---------------- */
+
 function UsersTab({ authFetch }) {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState("");
@@ -1389,6 +1504,8 @@ function UsersTab({ authFetch }) {
     </div>
   );
 }
+
+/* ---------------- RECENT ACTIVITY ---------------- */
 
 function RecentActivity({ products, orders, suppliers }) {
   return (
