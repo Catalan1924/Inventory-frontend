@@ -13,7 +13,6 @@ import {
   Legend,
 } from "recharts";
 
-const API_BASE = "http://127.0.0.1:8000/api";
 const API_BASE_URL = "https://inventory-backend-1-kcep.onrender.com/api";
 
 function App() {
@@ -92,9 +91,9 @@ function App() {
       setError("");
       try {
         const [pRes, sRes, oRes] = await Promise.all([
-          authFetch(`${API_BASE}/products/`),
-          authFetch(`${API_BASE}/suppliers/`),
-          authFetch(`${API_BASE}/orders/`),
+          authFetch(`${API_BASE_URL}/products/`),
+          authFetch(`${API_BASE_URL}/suppliers/`),
+          authFetch(`${API_BASE_URL}/orders/`),
         ]);
 
         if (pRes.status === 401 || sRes.status === 401 || oRes.status === 401) {
@@ -147,7 +146,7 @@ function App() {
     }
 
     try {
-      const res = await authFetch(`${API_BASE}/products/`, {
+      const res = await authFetch(`${API_BASE_URL}/products/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -181,7 +180,7 @@ function App() {
     setError("");
 
     try {
-      const res = await authFetch(`${API_BASE}/products/${id}/`, {
+      const res = await authFetch(`${API_BASE_URL}/products/${id}/`, {
         method: "DELETE",
       });
 
@@ -239,7 +238,7 @@ function App() {
     }
 
     try {
-      const res = await authFetch(`${API_BASE}/suppliers/`, {
+      const res = await authFetch(`${API_BASE_URL}/suppliers/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newSupplier),
@@ -266,7 +265,7 @@ function App() {
     }
 
     try {
-      const res = await authFetch(`${API_BASE}/orders/`, {
+      const res = await authFetch(`${API_BASE_URL}/orders/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -296,7 +295,7 @@ function App() {
   const handleLogout = async () => {
     try {
       if (token) {
-        await authFetch(`${API_BASE}/auth/logout/`, { method: "POST" });
+        await authFetch(`${API_BASE_URL}/auth/logout/`, { method: "POST" });
       }
     } catch (err) {
       console.error(err);
@@ -519,8 +518,8 @@ function LoginForm({ setToken, setUsername, setRole, setError, theme, setTheme }
 
     try {
       const url = isRegistering
-        ? `${API_BASE}/auth/register/`
-        : `${API_BASE}/auth/login/`;
+        ? `${API_BASE_URL}/auth/register/`
+        : `${API_BASE_URL}/auth/login/`;
 
       const payload = isRegistering
         ? { username: usernameInput, password, email }
@@ -1045,7 +1044,6 @@ function ProductsTab({
   );
 }
 
-/* ---------------- SUPPLIERS TAB ---------------- */
 
 function SuppliersTab({ suppliers, newSupplier, setNewSupplier, handleAddSupplier }) {
   return (
@@ -1123,7 +1121,6 @@ function SuppliersTab({ suppliers, newSupplier, setNewSupplier, handleAddSupplie
   );
 }
 
-/* ---------------- ORDERS TAB ---------------- */
 
 function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) {
   return (
@@ -1242,7 +1239,7 @@ function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) 
   );
 }
 
-/* ---------------- PROFILE TAB ---------------- */
+
 
 function ProfileTab({ authFetch }) {
   const [profile, setProfile] = useState({
@@ -1260,7 +1257,7 @@ function ProfileTab({ authFetch }) {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const res = await authFetch(`${API_BASE}/auth/profile/`);
+        const res = await authFetch(`${API_BASE_URL}/auth/profile/`);
         const data = await res.json();
         setProfile(data);
       } catch (e) {
@@ -1275,7 +1272,7 @@ function ProfileTab({ authFetch }) {
     setSaving(true);
     setMessage("");
     try {
-      const res = await authFetch(`${API_BASE}/auth/profile/`, {
+      const res = await authFetch(`${API_BASE_URL}/auth/profile/`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(profile),
@@ -1293,7 +1290,7 @@ function ProfileTab({ authFetch }) {
     e.preventDefault();
     setPwMsg("");
     try {
-      const res = await authFetch(`${API_BASE}/auth/change-password/`, {
+      const res = await authFetch(`${API_BASE_URL}/auth/change-password/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1389,7 +1386,7 @@ function ProfileTab({ authFetch }) {
   );
 }
 
-/* ---------------- USERS TAB (ADMIN) ---------------- */
+
 
 function UsersTab({ authFetch }) {
   const [users, setUsers] = useState([]);
@@ -1398,7 +1395,7 @@ function UsersTab({ authFetch }) {
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        const res = await authFetch(`${API_BASE}/users/`);
+        const res = await authFetch(`${API_BASE_URL}/users/`);
         if (res.status === 403) {
           setError("You are not allowed to view users.");
           return;
@@ -1452,7 +1449,7 @@ function UsersTab({ authFetch }) {
   );
 }
 
-/* ---------------- RECENT ACTIVITY ---------------- */
+
 
 function RecentActivity({ products, orders, suppliers }) {
   return (
@@ -1460,7 +1457,7 @@ function RecentActivity({ products, orders, suppliers }) {
       <h3>Recent Activity</h3>
 
       <div className="activity-section">
-        <p className="activity-title">🆕 Latest Products</p>
+        <p className="activity-title">Latest Products</p>
         {products
           .slice(-3)
           .reverse()
@@ -1473,7 +1470,7 @@ function RecentActivity({ products, orders, suppliers }) {
       </div>
 
       <div className="activity-section">
-        <p className="activity-title">📦 Latest Orders</p>
+        <p className="activity-title">Latest Orders</p>
         {orders
           .slice(-3)
           .reverse()
@@ -1486,7 +1483,7 @@ function RecentActivity({ products, orders, suppliers }) {
       </div>
 
       <div className="activity-section">
-        <p className="activity-title">🏭 Latest Suppliers</p>
+        <p className="activity-title">Latest Suppliers</p>
         {suppliers
           .slice(-3)
           .reverse()
