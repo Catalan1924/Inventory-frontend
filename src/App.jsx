@@ -57,6 +57,12 @@ function App() {
     status: "pending",
   });
 
+  // Sidebar local state: expanded lists + selected quick item
+  const [sidebarOpenProducts, setSidebarOpenProducts] = useState(true);
+  const [sidebarOpenSuppliers, setSidebarOpenSuppliers] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState(null);
+  const [selectedSupplierId, setSelectedSupplierId] = useState(null);
+
   // persist auth
   useEffect(() => {
     if (token) {
@@ -105,11 +111,7 @@ function App() {
           throw new Error("Failed to load data");
         }
 
-        const [pData, sData, oData] = await Promise.all([
-          pRes.json(),
-          sRes.json(),
-          oRes.json(),
-        ]);
+        const [pData, sData, oData] = await Promise.all([pRes.json(), sRes.json(), oRes.json()]);
 
         setProducts(pData);
         setSuppliers(sData);
@@ -124,6 +126,31 @@ function App() {
 
     fetchAll();
   }, [token]);
+
+  // reopen product in edit panel when selectedProductId changes
+  useEffect(() => {
+    if (selectedProductId == null) return;
+    const p = products.find((x) => x.id === selectedProductId);
+    if (p) {
+      setActiveTab("products");
+      setEditingProduct(p);
+      // clear selection after opening
+      setSelectedProductId(null);
+    }
+  }, [selectedProductId, products]);
+
+  // open supplier in profile/ suppliers tab when selectedSupplierId changes
+  useEffect(() => {
+    if (selectedSupplierId == null) return;
+    const s = suppliers.find((x) => x.id === selectedSupplierId);
+    if (s) {
+      setActiveTab("suppliers");
+      // We don't have a supplier edit form in the UI by default; set a temporary highlight using state
+      // For simplicity we'll set newSupplier to selected supplier when opening suppliers tab so the right details show
+      setNewSupplier({ name: s.name, contact: s.contact, email: s.email, id: s.id });
+      setSelectedSupplierId(null);
+    }
+  }, [selectedSupplierId, suppliers]);
 
   // stats
   const totalProducts = products.length;
@@ -211,7 +238,7 @@ function App() {
           (editingProduct.supplier ? editingProduct.supplier.id : null),
       };
 
-      const res = await authFetch(`${API_BASE}/products/${editingProduct.id}/`, {
+      const res = await authFetch(`${API_BASE_URL}/products/${editingProduct.id}/`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -238,10 +265,32 @@ function App() {
     }
 
     try {
+      // if newSupplier.id exists -> update instead of create
+      if (newSupplier.id) {
+        const res = await authFetch(`${API_BASE_URL}/suppliers/${newSupplier.id}/`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: newSupplier.name,
+            contact: newSupplier.contact,
+            email: newSupplier.email,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to update supplier");
+        const data = await res.json();
+        setSuppliers((prev) => prev.map((s) => (s.id === data.id ? data : s)));
+        setNewSupplier({ name: "", contact: "", email: "" });
+        return;
+      }
+
       const res = await authFetch(`${API_BASE_URL}/suppliers/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSupplier),
+        body: JSON.stringify({
+          name: newSupplier.name,
+          contact: newSupplier.contact,
+          email: newSupplier.email,
+        }),
       });
 
       if (!res.ok) throw new Error("Failed to create supplier");
@@ -250,7 +299,7 @@ function App() {
       setNewSupplier({ name: "", contact: "", email: "" });
     } catch (err) {
       console.error(err);
-      setError("Could not create supplier.");
+      setError("Could not create/update supplier.");
     }
   };
 
@@ -360,21 +409,104 @@ function App() {
           </button>
 
           {(role === "Admin" || role === "Staff") && (
-            <button
-              className={activeTab === "products" ? "nav-btn active" : "nav-btn"}
-              onClick={() => setActiveTab("products")}
-            >
-              Products
-            </button>
+            <>
+              <button
+                className={activeTab === "products" ? "nav-btn active" : "nav-btn"}
+                onClick={() => setActiveTab("products")}
+              >
+                Products
+              </button>
+
+              {/* QUICK PRODUCTS LIST */}
+              <div className="sidebar-list">
+                <div
+                  className="sidebar-list-header"
+                  onClick={() => setSidebarOpenProducts((v) => !v)}
+                >
+                  <small>Quick products</small>
+                  <span>{sidebarOpenProducts ? "▾" : "▸"}</span>
+                </div>
+                {sidebarOpenProducts && (
+                  <div className="sidebar-list-items">
+                    {products.length === 0 ? (
+                      <div className="empty">No products</div>
+                    ) : (
+                      // show up to 10 quick links
+                      products.slice(0, 10).map((p) => (
+                        <button
+                          key={p.id}
+                          className="sidebar-item-btn"
+                          title={`${p.name} — stock: ${p.stock}`}
+                          onClick={() => {
+                            // open product in edit
+                            setSelectedProductId(p.id);
+                          }}
+                        >
+                          <span className="sidebar-item-name">{p.name}</span>
+                          <span className="sidebar-item-stock">{p.stock}</span>
+                        </button>
+                      ))
+                    )}
+                    {products.length > 10 && (
+                      <button
+                        className="sidebar-view-all"
+                        onClick={() => setActiveTab("products")}
+                      >
+                        View all products
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           {role === "Admin" && (
-            <button
-              className={activeTab === "suppliers" ? "nav-btn active" : "nav-btn"}
-              onClick={() => setActiveTab("suppliers")}
-            >
-              Suppliers
-            </button>
+            <>
+              <button
+                className={activeTab === "suppliers" ? "nav-btn active" : "nav-btn"}
+                onClick={() => setActiveTab("suppliers")}
+              >
+                Suppliers
+              </button>
+
+              {/* QUICK SUPPLIERS LIST */}
+              <div className="sidebar-list">
+                <div
+                  className="sidebar-list-header"
+                  onClick={() => setSidebarOpenSuppliers((v) => !v)}
+                >
+                  <small>Quick suppliers</small>
+                  <span>{sidebarOpenSuppliers ? "▾" : "▸"}</span>
+                </div>
+                {sidebarOpenSuppliers && (
+                  <div className="sidebar-list-items">
+                    {suppliers.length === 0 ? (
+                      <div className="empty">No suppliers</div>
+                    ) : (
+                      suppliers.slice(0, 10).map((s) => (
+                        <button
+                          key={s.id}
+                          className="sidebar-item-btn"
+                          onClick={() => setSelectedSupplierId(s.id)}
+                        >
+                          <span className="sidebar-item-name">{s.name}</span>
+                          <span className="sidebar-item-stock">{s.contact || "-"}</span>
+                        </button>
+                      ))
+                    )}
+                    {suppliers.length > 10 && (
+                      <button
+                        className="sidebar-view-all"
+                        onClick={() => setActiveTab("suppliers")}
+                      >
+                        View all suppliers
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           <button
@@ -445,11 +577,7 @@ function App() {
                 completedOrders={completedOrders}
                 cancelledOrders={cancelledOrders}
               />
-              <RecentActivity
-                products={products}
-                orders={orders}
-                suppliers={suppliers}
-              />
+              <RecentActivity products={products} orders={orders} suppliers={suppliers} />
             </div>
           )}
 
@@ -493,9 +621,7 @@ function App() {
 
           {activeTab === "profile" && <ProfileTab authFetch={authFetch} />}
 
-          {activeTab === "users" && role === "Admin" && (
-            <UsersTab authFetch={authFetch} />
-          )}
+          {activeTab === "users" && role === "Admin" && <UsersTab authFetch={authFetch} />}
         </section>
       </main>
     </div>
@@ -504,7 +630,7 @@ function App() {
 
 /* ---------------- LOGIN FORM ---------------- */
 
-function LoginForm({ setToken, setUsername, setRole, setError, theme, setTheme }) {
+function LoginForm({ setToken, setUsername, setRole, setError,}) {
   const [usernameInput, setUsernameInput] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
@@ -517,13 +643,9 @@ function LoginForm({ setToken, setUsername, setRole, setError, theme, setTheme }
     setSubmitting(true);
 
     try {
-      const url = isRegistering
-        ? `${API_BASE_URL}/auth/register/`
-        : `${API_BASE_URL}/auth/login/`;
+      const url = isRegistering ? `${API_BASE_URL}/auth/register/` : `${API_BASE_URL}/auth/login/`;
 
-      const payload = isRegistering
-        ? { username: usernameInput, password, email }
-        : { username: usernameInput, password };
+      const payload = isRegistering ? { username: usernameInput, password, email } : { username: usernameInput, password };
 
       const res = await fetch(url, {
         method: "POST",
@@ -559,63 +681,31 @@ function LoginForm({ setToken, setUsername, setRole, setError, theme, setTheme }
       <form className="form" onSubmit={handleSubmit}>
         <label>
           Username
-          <input
-            value={usernameInput}
-            onChange={(e) => setUsernameInput(e.target.value)}
-            required
-          />
+          <input value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)} required />
         </label>
 
         {isRegistering && (
           <label>
             Email
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@example.com"
-            />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" />
           </label>
         )}
 
         <label>
           Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </label>
 
         <button className="primary-btn" disabled={submitting}>
-          {submitting
-            ? isRegistering
-              ? "Creating account..."
-              : "Logging in..."
-            : isRegistering
-            ? "Register"
-            : "Login"}
+          {submitting ? (isRegistering ? "Creating account..." : "Logging in...") : isRegistering ? "Register" : "Login"}
         </button>
       </form>
 
-      <button
-        className="theme-toggle"
-        style={{ marginTop: 10 }}
-        onClick={() => setIsRegistering(!isRegistering)}
-      >
-        {isRegistering
-          ? "Already have an account? Login"
-          : "Don’t have an account? Register"}
+      <button className="theme-toggle" style={{ marginTop: 10 }} onClick={() => setIsRegistering(!isRegistering)}>
+        {isRegistering ? "Already have an account? Login" : "Don’t have an account? Register"}
       </button>
 
-      <button
-        className="theme-toggle"
-        style={{ marginTop: 6 }}
-        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-      >
-        {theme === "dark" ? "🌞 Light Mode" : "🌙 Dark Mode"}
-      </button>
+
     </>
   );
 }
@@ -633,10 +723,7 @@ function Navbar({ username, role, theme, setTheme, onLogout, onProfileClick }) {
       </div>
 
       <div className="navbar-right">
-        <button
-          className="theme-toggle"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
+        <button className="theme-toggle" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? "🌞" : "🌙"}
         </button>
 
@@ -726,10 +813,7 @@ function Overview({
     <div className="grid overview-fit" style={{ alignItems: "stretch" }}>
       {/* summary cards */}
       <div className="card" style={{ gridColumn: "1 / -1" }}>
-        <div
-          className="grid"
-          style={{ gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}
-        >
+        <div className="grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
           <SummaryCard label="Total Products" value={totalProducts} />
           <SummaryCard label="Total Stock Qty" value={totalStockQty} />
           <SummaryCard label="Low Stock Items" value={lowStockCount} highlight />
@@ -761,13 +845,7 @@ function Overview({
         <div style={{ width: "100%", height: 200 }}>
           <ResponsiveContainer>
             <PieChart>
-              <Pie
-                data={stockStatusData}
-                dataKey="value"
-                nameKey="name"
-                outerRadius={70}
-                label
-              >
+              <Pie data={stockStatusData} dataKey="value" nameKey="name" outerRadius={70} label>
                 {stockStatusData.map((entry, index) => (
                   <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
                 ))}
@@ -784,13 +862,7 @@ function Overview({
         <div style={{ width: "100%", height: 200 }}>
           <ResponsiveContainer>
             <PieChart>
-              <Pie
-                data={orderStatusData}
-                dataKey="value"
-                nameKey="name"
-                outerRadius={70}
-                label
-              >
+              <Pie data={orderStatusData} dataKey="value" nameKey="name" outerRadius={70} label>
                 {orderStatusData.map((entry, index) => (
                   <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
                 ))}
@@ -800,9 +872,7 @@ function Overview({
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <p style={{ fontSize: "0.8rem", color: "#9ca3af", marginTop: 4 }}>
-          Total orders: {orders.length}
-        </p>
+        <p style={{ fontSize: "0.8rem", color: "#9ca3af", marginTop: 4 }}>Total orders: {orders.length}</p>
       </div>
     </div>
   );
@@ -812,17 +882,14 @@ function SummaryCard({ label, value, highlight }) {
   return (
     <div>
       <p style={{ margin: 0, fontSize: "0.78rem", color: "#9ca3af" }}>{label}</p>
-      <p
-        className="card-number"
-        style={highlight ? { color: "#f97316" } : undefined}
-      >
+      <p className="card-number" style={highlight ? { color: "#f97316" } : undefined}>
         {value}
       </p>
     </div>
   );
 }
 
-/* ---------------- PRODUCTS TAB ---------------- */
+
 
 function ProductsTab({
   products,
@@ -843,20 +910,11 @@ function ProductsTab({
   return (
     <div className="split">
       <div className="card">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 12,
-            marginBottom: 8,
-            alignItems: "center",
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 8, alignItems: "center" }}>
           <div>
             <h3 style={{ margin: 0 }}>Products</h3>
             <p style={{ margin: 0, fontSize: "0.78rem", color: "#9ca3af" }}>
-              Total: {fullProducts.length} | Low stock: {lowStockCount} | Stock
-              qty: {totalStockQty}
+              Total: {fullProducts.length} | Low stock: {lowStockCount} | Stock qty: {totalStockQty}
             </p>
           </div>
           <input
@@ -897,13 +955,11 @@ function ProductsTab({
                   <td>{p.reorder_level}</td>
                   <td>{p.supplier ? p.supplier.name : "-"}</td>
                   <td>
-                    <span className={isLow ? "badge danger" : "badge ok"}>
-                      {isLow ? "Low" : "OK"}
-                    </span>
+                    <span className={isLow ? "badge danger" : "badge ok"}>{isLow ? "Low" : "OK"}</span>
                   </td>
                   <td>
-                    <button onClick={() => setEditingProduct(p)}>✏️</button>
-                    <button onClick={() => handleDeleteProduct(p.id)}>🗑️</button>
+                    <button onClick={() => setEditingProduct(p)}>Edit</button>
+                    <button onClick={() => handleDeleteProduct(p.id)}>Delete</button>
                   </td>
                 </tr>
               );
@@ -921,18 +977,13 @@ function ProductsTab({
 
       <div className="card">
         <h3>{editingProduct ? "Edit Product" : "Add Product"}</h3>
-        <form
-          className="form"
-          onSubmit={editingProduct ? handleUpdateProduct : handleAddProduct}
-        >
+        <form className="form" onSubmit={editingProduct ? handleUpdateProduct : handleAddProduct}>
           <label>
             Name
             <input
               value={editingProduct ? editingProduct.name : newProduct.name}
               onChange={(e) =>
-                editingProduct
-                  ? setEditingProduct({ ...editingProduct, name: e.target.value })
-                  : setNewProduct({ ...newProduct, name: e.target.value })
+                editingProduct ? setEditingProduct({ ...editingProduct, name: e.target.value }) : setNewProduct({ ...newProduct, name: e.target.value })
               }
               placeholder="e.g. Laptop"
             />
@@ -943,9 +994,7 @@ function ProductsTab({
             <input
               value={editingProduct ? editingProduct.sku : newProduct.sku}
               onChange={(e) =>
-                editingProduct
-                  ? setEditingProduct({ ...editingProduct, sku: e.target.value })
-                  : setNewProduct({ ...newProduct, sku: e.target.value })
+                editingProduct ? setEditingProduct({ ...editingProduct, sku: e.target.value }) : setNewProduct({ ...newProduct, sku: e.target.value })
               }
               placeholder="e.g. LPT-001"
             />
@@ -957,12 +1006,7 @@ function ProductsTab({
               type="number"
               value={editingProduct ? editingProduct.stock : newProduct.stock}
               onChange={(e) =>
-                editingProduct
-                  ? setEditingProduct({
-                      ...editingProduct,
-                      stock: Number(e.target.value),
-                    })
-                  : setNewProduct({ ...newProduct, stock: e.target.value })
+                editingProduct ? setEditingProduct({ ...editingProduct, stock: Number(e.target.value) }) : setNewProduct({ ...newProduct, stock: e.target.value })
               }
               min="0"
               placeholder="e.g. 10"
@@ -973,21 +1017,9 @@ function ProductsTab({
             Reorder level
             <input
               type="number"
-              value={
-                editingProduct
-                  ? editingProduct.reorder_level
-                  : newProduct.reorder_level
-              }
+              value={editingProduct ? editingProduct.reorder_level : newProduct.reorder_level}
               onChange={(e) =>
-                editingProduct
-                  ? setEditingProduct({
-                      ...editingProduct,
-                      reorder_level: Number(e.target.value),
-                    })
-                  : setNewProduct({
-                      ...newProduct,
-                      reorder_level: e.target.value,
-                    })
+                editingProduct ? setEditingProduct({ ...editingProduct, reorder_level: Number(e.target.value) }) : setNewProduct({ ...newProduct, reorder_level: e.target.value })
               }
               min="0"
               placeholder="e.g. 5"
@@ -999,20 +1031,13 @@ function ProductsTab({
             <select
               value={
                 editingProduct
-                  ? editingProduct.supplier_id ??
-                    (editingProduct.supplier ? editingProduct.supplier.id : "")
+                  ? editingProduct.supplier_id ?? (editingProduct.supplier ? editingProduct.supplier.id : "")
                   : newProduct.supplier_id
               }
               onChange={(e) =>
                 editingProduct
-                  ? setEditingProduct({
-                      ...editingProduct,
-                      supplier_id: e.target.value || null,
-                    })
-                  : setNewProduct({
-                      ...newProduct,
-                      supplier_id: e.target.value,
-                    })
+                  ? setEditingProduct({ ...editingProduct, supplier_id: e.target.value || null })
+                  : setNewProduct({ ...newProduct, supplier_id: e.target.value })
               }
             >
               <option value="">None</option>
@@ -1024,17 +1049,10 @@ function ProductsTab({
             </select>
           </label>
 
-          <button className="primary-btn">
-            {editingProduct ? "Update Product" : "Save Product"}
-          </button>
+          <button className="primary-btn">{editingProduct ? "Update Product" : "Save Product"}</button>
 
           {editingProduct && (
-            <button
-              type="button"
-              className="primary-btn"
-              onClick={() => setEditingProduct(null)}
-              style={{ background: "#374151", color: "white" }}
-            >
+            <button type="button" className="primary-btn" onClick={() => setEditingProduct(null)} style={{ background: "#374151", color: "white" }}>
               Cancel
             </button>
           )}
@@ -1043,7 +1061,6 @@ function ProductsTab({
     </div>
   );
 }
-
 
 function SuppliersTab({ suppliers, newSupplier, setNewSupplier, handleAddSupplier }) {
   return (
@@ -1078,49 +1095,41 @@ function SuppliersTab({ suppliers, newSupplier, setNewSupplier, handleAddSupplie
       </div>
 
       <div className="card">
-        <h3>Add Supplier</h3>
+        <h3>{newSupplier.id ? "Edit Supplier" : "Add Supplier"}</h3>
         <form className="form" onSubmit={handleAddSupplier}>
           <label>
             Name
-            <input
-              value={newSupplier.name}
-              onChange={(e) =>
-                setNewSupplier({ ...newSupplier, name: e.target.value })
-              }
-              placeholder="Supplier name"
-            />
+            <input value={newSupplier.name} onChange={(e) => setNewSupplier({ ...newSupplier, name: e.target.value })} placeholder="Supplier name" />
           </label>
 
           <label>
             Contact
-            <input
-              value={newSupplier.contact}
-              onChange={(e) =>
-                setNewSupplier({ ...newSupplier, contact: e.target.value })
-              }
-              placeholder="+2547..."
-            />
+            <input value={newSupplier.contact} onChange={(e) => setNewSupplier({ ...newSupplier, contact: e.target.value })} placeholder="+2547..." />
           </label>
 
           <label>
             Email
-            <input
-              type="email"
-              value={newSupplier.email}
-              onChange={(e) =>
-                setNewSupplier({ ...newSupplier, email: e.target.value })
-              }
-              placeholder="email@example.com"
-            />
+            <input type="email" value={newSupplier.email} onChange={(e) => setNewSupplier({ ...newSupplier, email: e.target.value })} placeholder="email@example.com" />
           </label>
 
-          <button className="primary-btn">Save Supplier</button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="primary-btn">{newSupplier.id ? "Update Supplier" : "Save Supplier"}</button>
+            {newSupplier.id && (
+              <button
+                type="button"
+                className="primary-btn"
+                style={{ background: "#374151", color: "white" }}
+                onClick={() => setNewSupplier({ name: "", contact: "", email: "" })}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </div>
     </div>
   );
 }
-
 
 function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) {
   return (
@@ -1144,23 +1153,11 @@ function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) 
                 <td>{o.product ? o.product.name : "-"}</td>
                 <td>{o.quantity}</td>
                 <td>
-                  <span
-                    className={
-                      o.status === "pending"
-                        ? "badge warning"
-                        : o.status === "completed"
-                        ? "badge ok"
-                        : "badge danger"
-                    }
-                  >
+                  <span className={o.status === "pending" ? "badge warning" : o.status === "completed" ? "badge ok" : "badge danger"}>
                     {o.status}
                   </span>
                 </td>
-                <td>
-                  {o.created_at
-                    ? new Date(o.created_at).toLocaleString()
-                    : "-"}
-                </td>
+                <td>{o.created_at ? new Date(o.created_at).toLocaleString() : "-"}</td>
               </tr>
             ))}
             {orders.length === 0 && (
@@ -1179,23 +1176,12 @@ function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) 
         <form className="form" onSubmit={handleAddOrder}>
           <label>
             Order Number
-            <input
-              value={newOrder.order_number}
-              onChange={(e) =>
-                setNewOrder({ ...newOrder, order_number: e.target.value })
-              }
-              placeholder="e.g. ORD-1001"
-            />
+            <input value={newOrder.order_number} onChange={(e) => setNewOrder({ ...newOrder, order_number: e.target.value })} placeholder="e.g. ORD-1001" />
           </label>
 
           <label>
             Product
-            <select
-              value={newOrder.product_id}
-              onChange={(e) =>
-                setNewOrder({ ...newOrder, product_id: e.target.value })
-              }
-            >
+            <select value={newOrder.product_id} onChange={(e) => setNewOrder({ ...newOrder, product_id: e.target.value })}>
               <option value="">Select product</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -1207,25 +1193,12 @@ function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) 
 
           <label>
             Quantity
-            <input
-              type="number"
-              value={newOrder.quantity}
-              onChange={(e) =>
-                setNewOrder({ ...newOrder, quantity: e.target.value })
-              }
-              min="1"
-              placeholder="e.g. 5"
-            />
+            <input type="number" value={newOrder.quantity} onChange={(e) => setNewOrder({ ...newOrder, quantity: e.target.value })} min="1" placeholder="e.g. 5" />
           </label>
 
           <label>
             Status
-            <select
-              value={newOrder.status}
-              onChange={(e) =>
-                setNewOrder({ ...newOrder, status: e.target.value })
-              }
-            >
+            <select value={newOrder.status} onChange={(e) => setNewOrder({ ...newOrder, status: e.target.value })}>
               <option value="pending">Pending</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
@@ -1238,8 +1211,6 @@ function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) 
     </div>
   );
 }
-
-
 
 function ProfileTab({ authFetch }) {
   const [profile, setProfile] = useState({
@@ -1322,38 +1293,21 @@ function ProfileTab({ authFetch }) {
           </label>
           <label>
             Email
-            <input
-              value={profile.email || ""}
-              onChange={(e) =>
-                setProfile({ ...profile, email: e.target.value })
-              }
-            />
+            <input value={profile.email || ""} onChange={(e) => setProfile({ ...profile, email: e.target.value })} />
           </label>
           <label>
             First name
-            <input
-              value={profile.first_name || ""}
-              onChange={(e) =>
-                setProfile({ ...profile, first_name: e.target.value })
-              }
-            />
+            <input value={profile.first_name || ""} onChange={(e) => setProfile({ ...profile, first_name: e.target.value })} />
           </label>
           <label>
             Last name
-            <input
-              value={profile.last_name || ""}
-              onChange={(e) =>
-                setProfile({ ...profile, last_name: e.target.value })
-              }
-            />
+            <input value={profile.last_name || ""} onChange={(e) => setProfile({ ...profile, last_name: e.target.value })} />
           </label>
 
           <button className="primary-btn" disabled={saving}>
             {saving ? "Saving..." : "Save Profile"}
           </button>
-          {message && (
-            <p style={{ fontSize: "0.75rem", marginTop: 6 }}>{message}</p>
-          )}
+          {message && <p style={{ fontSize: "0.75rem", marginTop: 6 }}>{message}</p>}
         </form>
       </div>
 
@@ -1362,31 +1316,19 @@ function ProfileTab({ authFetch }) {
         <form className="form" onSubmit={handlePasswordChange}>
           <label>
             Old password
-            <input
-              type="password"
-              value={pwOld}
-              onChange={(e) => setPwOld(e.target.value)}
-            />
+            <input type="password" value={pwOld} onChange={(e) => setPwOld(e.target.value)} />
           </label>
           <label>
             New password
-            <input
-              type="password"
-              value={pwNew}
-              onChange={(e) => setPwNew(e.target.value)}
-            />
+            <input type="password" value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
           </label>
           <button className="primary-btn">Update Password</button>
-          {pwMsg && (
-            <p style={{ fontSize: "0.75rem", marginTop: 6 }}>{pwMsg}</p>
-          )}
+          {pwMsg && <p style={{ fontSize: "0.75rem", marginTop: 6 }}>{pwMsg}</p>}
         </form>
       </div>
     </div>
   );
 }
-
-
 
 function UsersTab({ authFetch }) {
   const [users, setUsers] = useState([]);
@@ -1449,8 +1391,6 @@ function UsersTab({ authFetch }) {
   );
 }
 
-
-
 function RecentActivity({ products, orders, suppliers }) {
   return (
     <div className="card">
@@ -1458,43 +1398,30 @@ function RecentActivity({ products, orders, suppliers }) {
 
       <div className="activity-section">
         <p className="activity-title">Latest Products</p>
-        {products
-          .slice(-3)
-          .reverse()
-          .map((p) => (
-            <p key={p.id} className="activity-item">
-              {p.name} — Stock: {p.stock}
-            </p>
-          ))}
+        {products.slice(-3).reverse().map((p) => (
+          <p key={p.id} className="activity-item">
+            {p.name} — Stock: {p.stock}
+          </p>
+        ))}
         {products.length === 0 && <p className="empty">No products yet.</p>}
       </div>
 
       <div className="activity-section">
         <p className="activity-title">Latest Orders</p>
-        {orders
-          .slice(-3)
-          .reverse()
-          .map((o) => (
-            <p key={o.id} className="activity-item">
-              {o.order_number} — {o.status}
-            </p>
-          ))}
+        {orders.slice(-3).reverse().map((o) => (
+          <p key={o.id} className="activity-item">
+            {o.order_number} — {o.status}
+          </p>
+        ))}
         {orders.length === 0 && <p className="empty">No orders yet.</p>}
       </div>
 
       <div className="activity-section">
         <p className="activity-title">Latest Suppliers</p>
-        {suppliers
-          .slice(-3)
-          .reverse()
-          .map((s) => (
-            <p key={s.id} className="activity-item">
-              {s.name}
-            </p>
-          ))}
-        {suppliers.length === 0 && (
-          <p className="empty">No suppliers yet.</p>
-        )}
+        {suppliers.slice(-3).reverse().map((s) => (
+          <p key={s.id} className="activity-item">{s.name}</p>
+        ))}
+        {suppliers.length === 0 && <p className="empty">No suppliers yet.</p>}
       </div>
     </div>
   );
