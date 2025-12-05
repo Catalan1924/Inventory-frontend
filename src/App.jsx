@@ -670,6 +670,7 @@ function App() {
 
 /* ---------------- LOGIN FORM ---------------- */
 
+// Replace your existing LoginForm with this updated component
 function LoginForm({ setToken, setUsername, setRole, setError, }) {
   const [usernameInput, setUsernameInput] = useState("");
   const [password, setPassword] = useState("");
@@ -677,15 +678,32 @@ function LoginForm({ setToken, setUsername, setRole, setError, }) {
   const [isRegistering, setIsRegistering] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // NEW: role chooser for the form (User or Admin)
+  const [selectedRole, setSelectedRole] = useState("User");
+  // adminKey only used during registration if Admin is chosen
+  const [adminKey, setAdminKey] = useState("");
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSubmitting(true);
 
     try {
-      const url = isRegistering ? `${API_BASE_URL}/auth/register/` : `${API_BASE_URL}/auth/login/`;
+      const url = isRegistering
+        ? `${API_BASE_URL}/auth/register/`
+        : `${API_BASE_URL}/auth/login/`;
 
-      const payload = isRegistering ? { username: usernameInput, password, email } : { username: usernameInput, password };
+      // payload: include admin_key only on register+admin
+      const payload = isRegistering
+        ? {
+            username: usernameInput,
+            password,
+            email,
+            // client asks to be admin — server will only honor if admin_key matches env secret
+            role: selectedRole,
+            admin_key: selectedRole === "Admin" ? adminKey : undefined,
+          }
+        : { username: usernameInput, password };
 
       const res = await fetch(url, {
         method: "POST",
@@ -696,15 +714,29 @@ function LoginForm({ setToken, setUsername, setRole, setError, }) {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(data.error || "Invalid username or password");
+        // show server-provided error if available
+        setError(data.error || data.message || "Invalid username or password");
         setSubmitting(false);
         return;
       }
 
+      // On register the server returns a token and on login too. Server SHOULD also return "role".
       if (data.token) {
+        // server role is authoritative — fallback to selectedRole only if server didn't return role
+        const serverRole = data.role || selectedRole || "User";
+
+        // if user chose Admin but server returned non-admin, show a friendly note
+        if (isRegistering && selectedRole === "Admin" && serverRole !== "Admin") {
+          // registration succeeded but server didn't grant admin privileges
+          // still store token but warn user
+          setError(
+            "Account created but admin key was not accepted — account created as User."
+          );
+        }
+
         setToken(data.token);
         setUsername(data.username || usernameInput);
-        setRole(data.role || "User");
+        setRole(serverRole);
       } else {
         setError("No token returned from server.");
       }
@@ -721,33 +753,89 @@ function LoginForm({ setToken, setUsername, setRole, setError, }) {
       <form className="form" onSubmit={handleSubmit}>
         <label>
           Username
-          <input value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)} required />
+          <input
+            value={usernameInput}
+            onChange={(e) => setUsernameInput(e.target.value)}
+            required
+          />
         </label>
 
         {isRegistering && (
           <label>
             Email
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@example.com"
+            />
           </label>
         )}
 
         <label>
           Password
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
         </label>
 
+        {/* NEW: Role selector */}
+        <label>
+          I am logging in / registering as
+          <select
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value)}
+            style={{ marginTop: 6 }}
+          >
+            <option value="User">User</option>
+            <option value="Admin">Admin</option>
+          </select>
+        </label>
+
+        {/* NEW: if registering & picking Admin, show admin key field */}
+        {isRegistering && selectedRole === "Admin" && (
+          <label>
+            Admin key
+            <input
+              value={adminKey}
+              onChange={(e) => setAdminKey(e.target.value)}
+              placeholder="Enter admin signup key"
+            />
+            <small style={{ color: "#f6f6f6", display: "block", marginTop: 6 }}>
+              Only provide this if you have the server's admin signup key.
+            </small>
+          </label>
+        )}
+
         <button className="primary-btn" disabled={submitting}>
-          {submitting ? (isRegistering ? "Creating account..." : "Logging in...") : isRegistering ? "Register" : "Login"}
+          {submitting
+            ? isRegistering
+              ? "Creating account..."
+              : "Logging in..."
+            : isRegistering
+            ? "Register"
+            : "Login"}
         </button>
       </form>
 
-      <button className="theme-toggle" style={{ marginTop: 10 }} onClick={() => setIsRegistering(!isRegistering)}>
-        {isRegistering ? "Already have an account? Login" : "Don’t have an account? Register"}
-      </button>
+      <div style={{ marginTop: 10, display: "flex", gap: 8, flexDirection: "column" }}>
+        <button
+          className="theme-toggle"
+          onClick={() => setIsRegistering(!isRegistering)}
+        >
+          {isRegistering ? "Already have an account? Login" : "Don’t have an account? Register"}
+        </button>
 
+
+      </div>
     </>
   );
 }
+
+
 
 /* ---------------- NAVBAR ---------------- */
 
