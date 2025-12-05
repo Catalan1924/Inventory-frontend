@@ -596,3 +596,11 @@ body {
   margin-top: 10px;
   font-size: 0.72rem;
 }
+.sidebar-list { margin: 8px 0 12px; }
+.sidebar-list-header { display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding:6px 8px; color:#9ca3af; font-size:0.8rem; }
+.sidebar-list-items { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+.sidebar-item-btn { display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-radius:6px; background:transparent; color:inherit; border:none; text-align:left; cursor:pointer; }
+.sidebar-item-btn:hover { background: rgba(255,255,255,0.03); }
+.sidebar-item-name { font-size:0.85rem; }
+.sidebar-item-stock { font-size:0.75rem; opacity:0.8; }
+.sidebar-view-all { margin-top:6px; background:transparent; border:1px dashed #374151; padding:6px 8px; border-radius:6px; cursor:pointer; }

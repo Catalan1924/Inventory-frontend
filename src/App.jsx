@@ -630,7 +630,7 @@ function App() {
 
 /* ---------------- LOGIN FORM ---------------- */
 
-function LoginForm({ setToken, setUsername, setRole, setError,}) {
+function LoginForm({ setToken, setUsername, setRole, setError, }) {
   const [usernameInput, setUsernameInput] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
@@ -704,7 +704,6 @@ function LoginForm({ setToken, setUsername, setRole, setError,}) {
       <button className="theme-toggle" style={{ marginTop: 10 }} onClick={() => setIsRegistering(!isRegistering)}>
         {isRegistering ? "Already have an account? Login" : "Don’t have an account? Register"}
       </button>
-
 
     </>
   );
@@ -889,7 +888,7 @@ function SummaryCard({ label, value, highlight }) {
   );
 }
 
-
+/* ---------------- PRODUCTS TAB ---------------- */
 
 function ProductsTab({
   products,
