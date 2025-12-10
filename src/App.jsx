@@ -21,6 +21,9 @@ function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [theme, setTheme] = useState("dark");
 
+  // NEW: mobile sidebar state
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
   // auth
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const [username, setUsername] = useState(
@@ -71,9 +74,6 @@ function App() {
   // new: open add flags (used to auto-focus and ensure add form is shown)
   const [openAddProduct, setOpenAddProduct] = useState(false);
   const [openAddSupplier, setOpenAddSupplier] = useState(false);
-
-  // NEW: mobile sidebar visibility
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // persist auth
   useEffect(() => {
@@ -159,7 +159,7 @@ function App() {
       setEditingProduct(p);
       setOpenAddProduct(false);
       setSelectedProductId(null);
-      setIsSidebarOpen(false);
+      setIsMobileNavOpen(false);
     }
   }, [selectedProductId, products]);
 
@@ -177,32 +177,25 @@ function App() {
       });
       setOpenAddSupplier(true);
       setSelectedSupplierId(null);
-      setIsSidebarOpen(false);
+      setIsMobileNavOpen(false);
     }
   }, [selectedSupplierId, suppliers]);
 
   // stats
   const totalProducts = products.length;
   const totalSuppliers = suppliers.length;
-  const lowStockCount = products.filter(
-    (p) => p.stock <= p.reorder_level
-  ).length;
-  const totalStockQty = products.reduce(
-    (sum, p) => sum + (p.stock || 0),
-    0
-  );
+  const lowStockCount = products.filter((p) => p.stock <= p.reorder_level).length;
+  const totalStockQty = products.reduce((sum, p) => sum + (p.stock || 0), 0);
 
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
   const completedOrders = orders.filter((o) => o.status === "completed").length;
-  const cancelledOrders = orders.filter(
-    (o) => o.status === "cancelled"
-  ).length;
+  const cancelledOrders = orders.filter((o) => o.status === "cancelled").length;
 
-  /* ---------------- NAV HANDLER (closes mobile sidebar) ---------------- */
+  /* ---------------- HELPERS ---------------- */
 
-  const handleNav = (tab) => {
+  const handleNavClick = (tab) => {
     setActiveTab(tab);
-    setIsSidebarOpen(false);
+    setIsMobileNavOpen(false); // close drawer on mobile
   };
 
   /* ---------------- PRODUCT HANDLERS ---------------- */
@@ -307,9 +300,7 @@ function App() {
       }
 
       const updated = await res.json();
-      setProducts((prev) =>
-        prev.map((p) => (p.id === updated.id ? updated : p))
-      );
+      setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
       setEditingProduct(null);
     } catch (err) {
       console.error(err);
@@ -351,9 +342,7 @@ function App() {
         }
 
         const data = await res.json();
-        setSuppliers((prev) =>
-          prev.map((s) => (s.id === data.id ? data : s))
-        );
+        setSuppliers((prev) => prev.map((s) => (s.id === data.id ? data : s)));
         setNewSupplier({ id: undefined, name: "", contact: "", email: "" });
         setOpenAddSupplier(false);
         return;
@@ -447,7 +436,7 @@ function App() {
       setSuppliers([]);
       setOrders([]);
       setActiveTab("overview");
-      setIsSidebarOpen(false);
+      setIsMobileNavOpen(false);
     }
   };
 
@@ -489,19 +478,36 @@ function App() {
 
   return (
     <div className={`app ${theme}`}>
-      {/* dark overlay when mobile sidebar is open */}
-      {isSidebarOpen && (
+      {/* MOBILE BACKDROP */}
+      {isMobileNavOpen && (
         <div
-          className="sidebar-backdrop"
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={() => setIsMobileNavOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 30,
+          }}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`sidebar ${
-          isSidebarOpen ? "sidebar-mobile-open" : ""
-        }`}
+        className="sidebar"
+        style={
+          isMobileNavOpen
+            ? {
+                position: "fixed",
+                top: 0,
+                left: 0,
+                bottom: 0,
+                zIndex: 40,
+                maxWidth: "260px",
+                width: "70%",
+                boxShadow: "0 0 40px rgba(0,0,0,0.6)",
+              }
+            : undefined
+        }
       >
         <h1 className="logo">
           Inventory<span>Pro</span>
@@ -509,7 +515,7 @@ function App() {
         <nav className="nav">
           <button
             className={activeTab === "overview" ? "nav-btn active" : "nav-btn"}
-            onClick={() => handleNav("overview")}
+            onClick={() => handleNavClick("overview")}
           >
             Overview
           </button>
@@ -520,7 +526,7 @@ function App() {
                 className={
                   activeTab === "products" ? "nav-btn active" : "nav-btn"
                 }
-                onClick={() => handleNav("products")}
+                onClick={() => handleNavClick("products")}
               >
                 Products
               </button>
@@ -537,8 +543,9 @@ function App() {
                     reorder_level: "",
                     supplier_id: "",
                   });
-                  handleNav("products");
+                  setActiveTab("products");
                   setOpenAddProduct(true);
+                  setIsMobileNavOpen(false);
                 }}
               >
                 ＋ Add product
@@ -548,9 +555,7 @@ function App() {
               <div className="sidebar-list">
                 <div
                   className="sidebar-list-header"
-                  onClick={() =>
-                    setSidebarOpenProducts((v) => !v)
-                  }
+                  onClick={() => setSidebarOpenProducts((v) => !v)}
                 >
                   <small>Quick products</small>
                   <span>{sidebarOpenProducts ? "▾" : "▸"}</span>
@@ -569,19 +574,15 @@ function App() {
                             setSelectedProductId(p.id);
                           }}
                         >
-                          <span className="sidebar-item-name">
-                            {p.name}
-                          </span>
-                          <span className="sidebar-item-stock">
-                            {p.stock}
-                          </span>
+                          <span className="sidebar-item-name">{p.name}</span>
+                          <span className="sidebar-item-stock">{p.stock}</span>
                         </button>
                       ))
                     )}
                     {products.length > 10 && (
                       <button
                         className="sidebar-view-all"
-                        onClick={() => handleNav("products")}
+                        onClick={() => handleNavClick("products")}
                       >
                         View all products
                       </button>
@@ -598,7 +599,7 @@ function App() {
                 className={
                   activeTab === "suppliers" ? "nav-btn active" : "nav-btn"
                 }
-                onClick={() => handleNav("suppliers")}
+                onClick={() => handleNavClick("suppliers")}
               >
                 Suppliers
               </button>
@@ -613,8 +614,9 @@ function App() {
                     contact: "",
                     email: "",
                   });
-                  handleNav("suppliers");
+                  setActiveTab("suppliers");
                   setOpenAddSupplier(true);
+                  setIsMobileNavOpen(false);
                 }}
               >
                 ＋ Add supplier
@@ -624,9 +626,7 @@ function App() {
               <div className="sidebar-list">
                 <div
                   className="sidebar-list-header"
-                  onClick={() =>
-                    setSidebarOpenSuppliers((v) => !v)
-                  }
+                  onClick={() => setSidebarOpenSuppliers((v) => !v)}
                 >
                   <small>Quick suppliers</small>
                   <span>{sidebarOpenSuppliers ? "▾" : "▸"}</span>
@@ -642,9 +642,7 @@ function App() {
                           className="sidebar-item-btn"
                           onClick={() => setSelectedSupplierId(s.id)}
                         >
-                          <span className="sidebar-item-name">
-                            {s.name}
-                          </span>
+                          <span className="sidebar-item-name">{s.name}</span>
                           <span className="sidebar-item-stock">
                             {s.contact || "-"}
                           </span>
@@ -654,7 +652,7 @@ function App() {
                     {suppliers.length > 10 && (
                       <button
                         className="sidebar-view-all"
-                        onClick={() => handleNav("suppliers")}
+                        onClick={() => handleNavClick("suppliers")}
                       >
                         View all suppliers
                       </button>
@@ -667,14 +665,14 @@ function App() {
 
           <button
             className={activeTab === "orders" ? "nav-btn active" : "nav-btn"}
-            onClick={() => handleNav("orders")}
+            onClick={() => handleNavClick("orders")}
           >
             Orders
           </button>
 
           <button
             className={activeTab === "profile" ? "nav-btn active" : "nav-btn"}
-            onClick={() => handleNav("profile")}
+            onClick={() => handleNavClick("profile")}
           >
             Profile
           </button>
@@ -682,7 +680,7 @@ function App() {
           {role === "Admin" && (
             <button
               className={activeTab === "users" ? "nav-btn active" : "nav-btn"}
-              onClick={() => handleNav("users")}
+              onClick={() => handleNavClick("users")}
             >
               Users
             </button>
@@ -698,8 +696,8 @@ function App() {
           theme={theme}
           setTheme={setTheme}
           onLogout={handleLogout}
-          onProfileClick={() => handleNav("profile")}
-          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+          onProfileClick={() => handleNavClick("profile")}
+          onToggleSidebar={() => setIsMobileNavOpen((v) => !v)} // NEW
         />
 
         {error && (
@@ -920,9 +918,7 @@ function LoginForm({ setToken, setUsername, setRole, setError }) {
               onChange={(e) => setAdminKey(e.target.value)}
               placeholder="19222444"
             />
-            <small
-              style={{ color: "#f6f6f6", display: "block", marginTop: 6 }}
-            >
+            <small style={{ color: "#f6f6f6", display: "block", marginTop: 6 }}>
               Must match the server's admin signup key.
             </small>
           </label>
@@ -976,19 +972,23 @@ function Navbar({
 
   return (
     <header className="navbar">
-      <div className="navbar-left">
-        {/* HAMBURGER FOR MOBILE */}
+      <div className="navbar-left" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        {/* HAMBURGER */}
         <button
-          className="hamburger"
-          type="button"
           aria-label="Toggle navigation"
           onClick={onToggleSidebar}
+          style={{
+            padding: "6px 8px",
+            borderRadius: 8,
+            border: "1px solid #1f2937",
+            background: "transparent",
+            color: "inherit",
+            cursor: "pointer",
+            fontSize: "1rem",
+          }}
         >
-          <span />
-          <span />
-          <span />
+          ☰
         </button>
-
         <h2 className="navbar-title">Dashboard</h2>
       </div>
 
@@ -1513,12 +1513,7 @@ function SuppliersTab({
           onSubmit={handleAddSupplier}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
-              setNewSupplier({
-                id: undefined,
-                name: "",
-                contact: "",
-                email: "",
-              });
+              setNewSupplier({ id: undefined, name: "", contact: "", email: "" });
               setOpenAdd(false);
             }
           }}
@@ -1624,9 +1619,7 @@ function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) 
                   </span>
                 </td>
                 <td>
-                  {o.created_at
-                    ? new Date(o.created_at).toLocaleString()
-                    : "-"}
+                  {o.created_at ? new Date(o.created_at).toLocaleString() : "-"}
                 </td>
               </tr>
             ))}
