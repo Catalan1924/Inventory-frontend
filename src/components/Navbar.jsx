@@ -11,12 +11,9 @@ export default function Navbar({
 
   return (
     <header className="navbar">
-      {/* Left */}
       <div className="navbar-left">
         <h2 className="navbar-title">InventoryPro</h2>
       </div>
-
-      {/* Right */}
       <div className="navbar-right">
         <button
           className="theme-toggle"
