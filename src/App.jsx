@@ -738,7 +738,6 @@ function App() {
 }
 
 /* ---------------- LOGIN FORM ---------------- */
-/* ---------------- LOGIN FORM ---------------- */
 
 function LoginForm({ setToken, setUsername, setRole, setError }) {
   const [usernameInput, setUsernameInput] = useState("");
@@ -747,9 +746,9 @@ function LoginForm({ setToken, setUsername, setRole, setError }) {
   const [isRegistering, setIsRegistering] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Role chooser in the UI
+  // Role selector
   const [selectedRole, setSelectedRole] = useState("User");
-  // Admin key only used during registration if Admin is chosen
+  // Admin key (only when registering as Admin)
   const [adminKey, setAdminKey] = useState("");
 
   const handleSubmit = async (e) => {
@@ -767,7 +766,7 @@ function LoginForm({ setToken, setUsername, setRole, setError }) {
             username: usernameInput,
             password,
             email,
-            // Backend only cares about admin_key; it ignores "role"
+            role: selectedRole,
             admin_key: selectedRole === "Admin" ? adminKey : undefined,
           }
         : { username: usernameInput, password };
@@ -789,12 +788,9 @@ function LoginForm({ setToken, setUsername, setRole, setError }) {
       if (data.token) {
         const serverRole = data.role || "User";
 
-        // If user tried to register as Admin but server did not grant it, show a warning
         if (isRegistering && selectedRole === "Admin" && serverRole !== "Admin") {
           setError(
-            data.admin_granted === false
-              ? "Account created but admin key was not accepted — account created as User."
-              : "Account created as User."
+            "Account created but admin key was not accepted — account created as User."
           );
         }
 
@@ -867,7 +863,7 @@ function LoginForm({ setToken, setUsername, setRole, setError }) {
               placeholder="Enter admin signup key"
             />
             <small style={{ color: "#f6f6f6", display: "block", marginTop: 6 }}>
-              This must match the server&apos;s admin signup key.
+              Must match the server's admin signup key.
             </small>
           </label>
         )}
@@ -893,7 +889,6 @@ function LoginForm({ setToken, setUsername, setRole, setError }) {
       >
         <button
           className="theme-toggle"
-          type="button"
           onClick={() => setIsRegistering(!isRegistering)}
         >
           {isRegistering
@@ -904,6 +899,7 @@ function LoginForm({ setToken, setUsername, setRole, setError }) {
     </>
   );
 }
+
 
 
 /* ---------------- NAVBAR ---------------- */
