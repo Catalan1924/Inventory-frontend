@@ -23,7 +23,9 @@ function App() {
 
   // auth
   const [token, setToken] = useState(localStorage.getItem("token") || "");
-  const [username, setUsername] = useState(localStorage.getItem("username") || "");
+  const [username, setUsername] = useState(
+    localStorage.getItem("username") || ""
+  );
   const [role, setRole] = useState(localStorage.getItem("role") || "User");
   const isAuthenticated = !!token;
 
@@ -69,6 +71,9 @@ function App() {
   // new: open add flags (used to auto-focus and ensure add form is shown)
   const [openAddProduct, setOpenAddProduct] = useState(false);
   const [openAddSupplier, setOpenAddSupplier] = useState(false);
+
+  // NEW: mobile sidebar visibility
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // persist auth
   useEffect(() => {
@@ -154,6 +159,7 @@ function App() {
       setEditingProduct(p);
       setOpenAddProduct(false);
       setSelectedProductId(null);
+      setIsSidebarOpen(false);
     }
   }, [selectedProductId, products]);
 
@@ -171,18 +177,33 @@ function App() {
       });
       setOpenAddSupplier(true);
       setSelectedSupplierId(null);
+      setIsSidebarOpen(false);
     }
   }, [selectedSupplierId, suppliers]);
 
   // stats
   const totalProducts = products.length;
   const totalSuppliers = suppliers.length;
-  const lowStockCount = products.filter((p) => p.stock <= p.reorder_level).length;
-  const totalStockQty = products.reduce((sum, p) => sum + (p.stock || 0), 0);
+  const lowStockCount = products.filter(
+    (p) => p.stock <= p.reorder_level
+  ).length;
+  const totalStockQty = products.reduce(
+    (sum, p) => sum + (p.stock || 0),
+    0
+  );
 
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
   const completedOrders = orders.filter((o) => o.status === "completed").length;
-  const cancelledOrders = orders.filter((o) => o.status === "cancelled").length;
+  const cancelledOrders = orders.filter(
+    (o) => o.status === "cancelled"
+  ).length;
+
+  /* ---------------- NAV HANDLER (closes mobile sidebar) ---------------- */
+
+  const handleNav = (tab) => {
+    setActiveTab(tab);
+    setIsSidebarOpen(false);
+  };
 
   /* ---------------- PRODUCT HANDLERS ---------------- */
 
@@ -286,7 +307,9 @@ function App() {
       }
 
       const updated = await res.json();
-      setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      setProducts((prev) =>
+        prev.map((p) => (p.id === updated.id ? updated : p))
+      );
       setEditingProduct(null);
     } catch (err) {
       console.error(err);
@@ -328,7 +351,9 @@ function App() {
         }
 
         const data = await res.json();
-        setSuppliers((prev) => prev.map((s) => (s.id === data.id ? data : s)));
+        setSuppliers((prev) =>
+          prev.map((s) => (s.id === data.id ? data : s))
+        );
         setNewSupplier({ id: undefined, name: "", contact: "", email: "" });
         setOpenAddSupplier(false);
         return;
@@ -422,6 +447,7 @@ function App() {
       setSuppliers([]);
       setOrders([]);
       setActiveTab("overview");
+      setIsSidebarOpen(false);
     }
   };
 
@@ -463,15 +489,27 @@ function App() {
 
   return (
     <div className={`app ${theme}`}>
+      {/* dark overlay when mobile sidebar is open */}
+      {isSidebarOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside
+        className={`sidebar ${
+          isSidebarOpen ? "sidebar-mobile-open" : ""
+        }`}
+      >
         <h1 className="logo">
           Inventory<span>Pro</span>
         </h1>
         <nav className="nav">
           <button
             className={activeTab === "overview" ? "nav-btn active" : "nav-btn"}
-            onClick={() => setActiveTab("overview")}
+            onClick={() => handleNav("overview")}
           >
             Overview
           </button>
@@ -479,8 +517,10 @@ function App() {
           {(role === "Admin" || role === "Staff") && (
             <>
               <button
-                className={activeTab === "products" ? "nav-btn active" : "nav-btn"}
-                onClick={() => setActiveTab("products")}
+                className={
+                  activeTab === "products" ? "nav-btn active" : "nav-btn"
+                }
+                onClick={() => handleNav("products")}
               >
                 Products
               </button>
@@ -497,7 +537,7 @@ function App() {
                     reorder_level: "",
                     supplier_id: "",
                   });
-                  setActiveTab("products");
+                  handleNav("products");
                   setOpenAddProduct(true);
                 }}
               >
@@ -508,7 +548,9 @@ function App() {
               <div className="sidebar-list">
                 <div
                   className="sidebar-list-header"
-                  onClick={() => setSidebarOpenProducts((v) => !v)}
+                  onClick={() =>
+                    setSidebarOpenProducts((v) => !v)
+                  }
                 >
                   <small>Quick products</small>
                   <span>{sidebarOpenProducts ? "▾" : "▸"}</span>
@@ -527,15 +569,19 @@ function App() {
                             setSelectedProductId(p.id);
                           }}
                         >
-                          <span className="sidebar-item-name">{p.name}</span>
-                          <span className="sidebar-item-stock">{p.stock}</span>
+                          <span className="sidebar-item-name">
+                            {p.name}
+                          </span>
+                          <span className="sidebar-item-stock">
+                            {p.stock}
+                          </span>
                         </button>
                       ))
                     )}
                     {products.length > 10 && (
                       <button
                         className="sidebar-view-all"
-                        onClick={() => setActiveTab("products")}
+                        onClick={() => handleNav("products")}
                       >
                         View all products
                       </button>
@@ -549,8 +595,10 @@ function App() {
           {role === "Admin" && (
             <>
               <button
-                className={activeTab === "suppliers" ? "nav-btn active" : "nav-btn"}
-                onClick={() => setActiveTab("suppliers")}
+                className={
+                  activeTab === "suppliers" ? "nav-btn active" : "nav-btn"
+                }
+                onClick={() => handleNav("suppliers")}
               >
                 Suppliers
               </button>
@@ -559,8 +607,13 @@ function App() {
               <button
                 className="sidebar-add-btn"
                 onClick={() => {
-                  setNewSupplier({ id: undefined, name: "", contact: "", email: "" });
-                  setActiveTab("suppliers");
+                  setNewSupplier({
+                    id: undefined,
+                    name: "",
+                    contact: "",
+                    email: "",
+                  });
+                  handleNav("suppliers");
                   setOpenAddSupplier(true);
                 }}
               >
@@ -571,7 +624,9 @@ function App() {
               <div className="sidebar-list">
                 <div
                   className="sidebar-list-header"
-                  onClick={() => setSidebarOpenSuppliers((v) => !v)}
+                  onClick={() =>
+                    setSidebarOpenSuppliers((v) => !v)
+                  }
                 >
                   <small>Quick suppliers</small>
                   <span>{sidebarOpenSuppliers ? "▾" : "▸"}</span>
@@ -587,7 +642,9 @@ function App() {
                           className="sidebar-item-btn"
                           onClick={() => setSelectedSupplierId(s.id)}
                         >
-                          <span className="sidebar-item-name">{s.name}</span>
+                          <span className="sidebar-item-name">
+                            {s.name}
+                          </span>
                           <span className="sidebar-item-stock">
                             {s.contact || "-"}
                           </span>
@@ -597,7 +654,7 @@ function App() {
                     {suppliers.length > 10 && (
                       <button
                         className="sidebar-view-all"
-                        onClick={() => setActiveTab("suppliers")}
+                        onClick={() => handleNav("suppliers")}
                       >
                         View all suppliers
                       </button>
@@ -610,14 +667,14 @@ function App() {
 
           <button
             className={activeTab === "orders" ? "nav-btn active" : "nav-btn"}
-            onClick={() => setActiveTab("orders")}
+            onClick={() => handleNav("orders")}
           >
             Orders
           </button>
 
           <button
             className={activeTab === "profile" ? "nav-btn active" : "nav-btn"}
-            onClick={() => setActiveTab("profile")}
+            onClick={() => handleNav("profile")}
           >
             Profile
           </button>
@@ -625,7 +682,7 @@ function App() {
           {role === "Admin" && (
             <button
               className={activeTab === "users" ? "nav-btn active" : "nav-btn"}
-              onClick={() => setActiveTab("users")}
+              onClick={() => handleNav("users")}
             >
               Users
             </button>
@@ -641,7 +698,8 @@ function App() {
           theme={theme}
           setTheme={setTheme}
           onLogout={handleLogout}
-          onProfileClick={() => setActiveTab("profile")}
+          onProfileClick={() => handleNav("profile")}
+          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
         />
 
         {error && (
@@ -862,7 +920,9 @@ function LoginForm({ setToken, setUsername, setRole, setError }) {
               onChange={(e) => setAdminKey(e.target.value)}
               placeholder="19222444"
             />
-            <small style={{ color: "#f6f6f6", display: "block", marginTop: 6 }}>
+            <small
+              style={{ color: "#f6f6f6", display: "block", marginTop: 6 }}
+            >
               Must match the server's admin signup key.
             </small>
           </label>
@@ -900,17 +960,35 @@ function LoginForm({ setToken, setUsername, setRole, setError }) {
   );
 }
 
-
-
 /* ---------------- NAVBAR ---------------- */
 
-function Navbar({ username, role, theme, setTheme, onLogout, onProfileClick }) {
+function Navbar({
+  username,
+  role,
+  theme,
+  setTheme,
+  onLogout,
+  onProfileClick,
+  onToggleSidebar,
+}) {
   const [open, setOpen] = useState(false);
   const initial = username ? username[0].toUpperCase() : "U";
 
   return (
     <header className="navbar">
       <div className="navbar-left">
+        {/* HAMBURGER FOR MOBILE */}
+        <button
+          className="hamburger"
+          type="button"
+          aria-label="Toggle navigation"
+          onClick={onToggleSidebar}
+        >
+          <span />
+          <span />
+          <span />
+        </button>
+
         <h2 className="navbar-title">Dashboard</h2>
       </div>
 
@@ -1435,7 +1513,12 @@ function SuppliersTab({
           onSubmit={handleAddSupplier}
           onKeyDown={(e) => {
             if (e.key === "Escape") {
-              setNewSupplier({ id: undefined, name: "", contact: "", email: "" });
+              setNewSupplier({
+                id: undefined,
+                name: "",
+                contact: "",
+                email: "",
+              });
               setOpenAdd(false);
             }
           }}
@@ -1541,7 +1624,9 @@ function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) 
                   </span>
                 </td>
                 <td>
-                  {o.created_at ? new Date(o.created_at).toLocaleString() : "-"}
+                  {o.created_at
+                    ? new Date(o.created_at).toLocaleString()
+                    : "-"}
                 </td>
               </tr>
             ))}

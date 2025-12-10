@@ -680,3 +680,46 @@ body {
     font-size: 0.68rem;
   }
 }
+.hamburger {
+  display: none;
+  margin-right: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 4px;
+}
+.hamburger span {
+  width: 18px;
+  height: 2px;
+  background: #e5e7eb;
+  display: block;
+  border-radius: 999px;
+}
+
+/* Mobile */
+@media (max-width: 900px) {
+  .hamburger {
+    display: flex;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .sidebar.sidebar-mobile-open {
+    display: flex;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: 60;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 50;
+  }
+}
