@@ -11,8 +11,6 @@ body {
   background: #020617;
   color: #e5e7eb;
 }
-
-/* Let the page scroll vertically */
 body {
   overflow-x: hidden;
 }
@@ -20,17 +18,12 @@ body {
 #root {
   min-height: 100vh;
 }
-
-/* ============ LAYOUT ============ */
-
 .app {
   display: flex;
   min-height: 100vh;
   background: #020617;
   color: #e5e7eb;
 }
-
-/* Sidebar */
 .sidebar {
   width: 220px;
   background: #020617;
@@ -77,8 +70,6 @@ body {
   background: #facc15;
   color: #111827;
 }
-
-/* Main */
 .main {
   flex: 1;
   padding: 10px 14px;
@@ -86,8 +77,6 @@ body {
   flex-direction: column;
   min-height: 0;
 }
-
-/* Top bar is now the navbar component */
 .navbar {
   height: 80px;
   background: #020617;
@@ -108,17 +97,12 @@ body {
   font-size: 2.8rem;
   font-weight: 700;
 }
-
-/* Content scrolls inside */
 .content {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   padding-top: 8px;
 }
-
-/* ============ CARDS / TABLES ============ */
-
 .grid {
   display: grid;
   gap: 10px;
@@ -148,8 +132,6 @@ body {
 .card-number.warning {
   color: #f97316;
 }
-
-/* Overview layout */
 .overview-layout {
   display: grid;
   grid-template-columns: 3fr 1.1fr;
@@ -162,8 +144,6 @@ body {
   height: 100%;
   min-height: 0;
 }
-
-/* Split layout (tables + forms) */
 .split {
   display: grid;
   grid-template-columns: 1.9fr 1.1fr;
@@ -175,8 +155,6 @@ body {
 .split .card {
   min-height: 0;
 }
-
-/* Table */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -206,8 +184,6 @@ body {
   font-size: 0.8rem;
   color: #6b7280;
 }
-
-/* Badges */
 .badge {
   display: inline-block;
   padding: 2px 8px;
@@ -276,8 +252,6 @@ body {
 .primary-btn:hover {
   filter: brightness(0.95);
 }
-
-/* Misc buttons */
 .theme-toggle {
   background: #1f2937;
   color: white;
@@ -312,9 +286,6 @@ body {
 .recharts-wrapper {
   font-size: 0.72rem;
 }
-
-/* ============ LIGHT THEME ============ */
-
 .app.light {
   background: #f1f5f9;
   color: #111827;
@@ -354,9 +325,6 @@ body {
   background: #111827;
   color: #f9fafb;
 }
-
-/* ============ NAVBAR PROFILE ============ */
-
 .navbar-right {
   display: flex;
   align-items: center;
@@ -455,9 +423,6 @@ body {
   background: #1f2937;
   margin: 6px 0;
 }
-
-/* ============ SIDEBAR EXTRAS ============ */
-
 .sidebar-add-btn {
   display: block;
   width: 100%;
@@ -474,9 +439,6 @@ body {
 .sidebar-add-btn:hover {
   background: rgba(255, 255, 255, 0.03);
 }
-
-/* ============ LOGIN PAGE ============ */
-
 .login-wrapper {
   min-height: 100vh;
   width: 100vw;
@@ -576,9 +538,6 @@ body {
   font-size: 0.72rem;
 }
 
-/* ============ RESPONSIVE ============ */
-
-/* Large tablet / small laptop */
 @media (max-width: 1200px) {
   .overview-layout {
     grid-template-columns: 2fr 1.3fr;
@@ -592,8 +551,6 @@ body {
     font-size: 2.4rem;
   }
 }
-
-/* Tablet */
 @media (max-width: 900px) {
   .sidebar {
     display: none;
@@ -631,8 +588,6 @@ body {
     padding-bottom: 16px;
   }
 }
-
-/* Phones */
 @media (max-width: 600px) {
   .navbar {
     height: 64px;
@@ -665,8 +620,6 @@ body {
     padding: 4px 2px;
   }
 }
-
-/* Very small phones */
 @media (max-width: 400px) {
   .navbar-title {
     font-size: 1.5rem;
@@ -696,8 +649,6 @@ body {
   display: block;
   border-radius: 999px;
 }
-
-/* Mobile */
 @media (max-width: 900px) {
   .hamburger {
     display: flex;
