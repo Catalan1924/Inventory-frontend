@@ -5,26 +5,32 @@
 html,
 body {
   margin: 0;
-  height: 100%;
-  overflow: hidden; 
+  padding: 0;
+  min-height: 100vh;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #020617;
+  color: #e5e7eb;
+}
+
+/* Let the page scroll vertically */
+body {
+  overflow-x: hidden;
 }
 
 #root {
-  height: 100%;
+  min-height: 100vh;
 }
 
-
+/* ============ LAYOUT ============ */
 
 .app {
   display: flex;
-  height: 100%;
+  min-height: 100vh;
   background: #020617;
   color: #e5e7eb;
-  overflow: hidden; 
 }
 
-
+/* Sidebar */
 .sidebar {
   width: 220px;
   background: #020617;
@@ -72,41 +78,46 @@ body {
   color: #111827;
 }
 
-
-
+/* Main */
 .main {
   flex: 1;
   padding: 10px 14px;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  min-height: 0;
 }
 
-.topbar {
+/* Top bar is now the navbar component */
+.navbar {
+  height: 80px;
+  background: #020617;
+  border-bottom: 1px solid #1f2937;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  padding: 0 14px;
+  flex-shrink: 0;
 }
 
-.topbar h2 {
-  margin: 0;
-  font-size: 1.25rem;
+.app.light .navbar {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
 }
 
-.subtitle {
-  margin: 2px 0 0;
-  font-size: 0.8rem;
-  color: #9ca3af;
+.navbar-title {
+  font-size: 2.8rem;
+  font-weight: 700;
 }
 
+/* Content scrolls inside */
 .content {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  padding-top: 8px;
 }
 
+/* ============ CARDS / TABLES ============ */
 
 .grid {
   display: grid;
@@ -121,7 +132,6 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: auto;
 }
 
 .card h3 {
@@ -139,7 +149,7 @@ body {
   color: #f97316;
 }
 
-
+/* Overview layout */
 .overview-layout {
   display: grid;
   grid-template-columns: 3fr 1.1fr;
@@ -153,7 +163,7 @@ body {
   min-height: 0;
 }
 
-
+/* Split layout (tables + forms) */
 .split {
   display: grid;
   grid-template-columns: 1.9fr 1.1fr;
@@ -166,7 +176,7 @@ body {
   min-height: 0;
 }
 
-
+/* Table */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -197,8 +207,7 @@ body {
   color: #6b7280;
 }
 
-
-
+/* Badges */
 .badge {
   display: inline-block;
   padding: 2px 8px;
@@ -221,8 +230,7 @@ body {
   color: #fdba74;
 }
 
-
-
+/* Forms */
 .form {
   display: flex;
   flex-direction: column;
@@ -269,7 +277,7 @@ body {
   filter: brightness(0.95);
 }
 
-
+/* Misc buttons */
 .theme-toggle {
   background: #1f2937;
   color: white;
@@ -283,8 +291,6 @@ body {
 .theme-toggle:hover {
   filter: brightness(1.1);
 }
-
-
 
 .activity-section {
   margin-top: 10px;
@@ -303,11 +309,11 @@ body {
   border-bottom: 1px solid #1f2937;
 }
 
-
 .recharts-wrapper {
   font-size: 0.72rem;
 }
 
+/* ============ LIGHT THEME ============ */
 
 .app.light {
   background: #f1f5f9;
@@ -349,54 +355,7 @@ body {
   color: #f9fafb;
 }
 
-
-@media (max-width: 1200px) {
-  .overview-layout {
-    grid-template-columns: 2fr 1.3fr;
-  }
-
-  .split {
-    grid-template-columns: 1.7fr 1.1fr;
-  }
-}
-
-@media (max-width: 900px) {
-  .sidebar {
-    display: none;
-  }
-
-  .main {
-    padding: 8px;
-  }
-
-  .overview-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .split {
-    grid-template-columns: 1fr;
-  }
-}
-
-.navbar {
-  height: 80px;
-  background: #020617;
-  border-bottom: 1px solid #1f2937;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 14px;
-}
-
-.app.light .navbar {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.navbar-title {
-  font-size: 4rem;
-  font-weight: 700;
-}
+/* ============ NAVBAR PROFILE ============ */
 
 .navbar-right {
   display: flex;
@@ -497,6 +456,26 @@ body {
   margin: 6px 0;
 }
 
+/* ============ SIDEBAR EXTRAS ============ */
+
+.sidebar-add-btn {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  margin: 6px 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidebar-add-btn:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ============ LOGIN PAGE ============ */
 
 .login-wrapper {
   min-height: 100vh;
@@ -596,16 +575,108 @@ body {
   margin-top: 10px;
   font-size: 0.72rem;
 }
-.sidebar-add-btn {
-  display:block;
-  width:100%;
-  padding:6px 10px;
-  margin:6px 0;
-  border-radius:8px;
-  background:transparent;
-  color:inherit;
-  border:1px solid rgba(255,255,255,0.04);
-  cursor:pointer;
-  text-align:left;
+
+/* ============ RESPONSIVE ============ */
+
+/* Large tablet / small laptop */
+@media (max-width: 1200px) {
+  .overview-layout {
+    grid-template-columns: 2fr 1.3fr;
+  }
+
+  .split {
+    grid-template-columns: 1.7fr 1.1fr;
+  }
+
+  .navbar-title {
+    font-size: 2.4rem;
+  }
 }
-.sidebar-add-btn:hover { background: rgba(255,255,255,0.03); }
+
+/* Tablet */
+@media (max-width: 900px) {
+  .sidebar {
+    display: none;
+  }
+
+  .app {
+    flex-direction: column;
+  }
+
+  .main {
+    padding: 8px;
+  }
+
+  .navbar {
+    padding: 0 10px;
+  }
+
+  .navbar-title {
+    font-size: 2rem;
+  }
+
+  .overview-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  .card {
+    max-height: none;
+  }
+
+  .content {
+    padding-bottom: 16px;
+  }
+}
+
+/* Phones */
+@media (max-width: 600px) {
+  .navbar {
+    height: 64px;
+  }
+
+  .navbar-title {
+    font-size: 1.7rem;
+  }
+
+  .login-card {
+    margin: 0 10px;
+    padding: 22px 18px;
+  }
+
+  .login-card .logo {
+    font-size: 1.6rem;
+  }
+
+  .login-card input {
+    padding: 9px 10px;
+    font-size: 0.85rem;
+  }
+
+  .primary-btn {
+    width: 100%;
+  }
+
+  .table th,
+  .table td {
+    padding: 4px 2px;
+  }
+}
+
+/* Very small phones */
+@media (max-width: 400px) {
+  .navbar-title {
+    font-size: 1.5rem;
+  }
+
+  .profile-name {
+    font-size: 0.8rem;
+  }
+
+  .profile-role {
+    font-size: 0.68rem;
+  }
+}
