@@ -860,7 +860,7 @@ function LoginForm({ setToken, setUsername, setRole, setError }) {
             <input
               value={adminKey}
               onChange={(e) => setAdminKey(e.target.value)}
-              placeholder="Enter admin signup key"
+              placeholder="19222444"
             />
             <small style={{ color: "#f6f6f6", display: "block", marginTop: 6 }}>
               Must match the server's admin signup key.
