@@ -15,29 +15,21 @@ import {
 
 const API_BASE_URL = "https://inventory-backend-1-kcep.onrender.com/api";
 
-/* ---------------- ROOT APP ---------------- */
 
 function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [theme, setTheme] = useState("dark");
-
-  // auth
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const [username, setUsername] = useState(localStorage.getItem("username") || "");
   const [role, setRole] = useState(localStorage.getItem("role") || "User");
   const isAuthenticated = !!token;
-
-  // data
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [orders, setOrders] = useState([]);
-
-  // ui + forms
   const [searchTerm, setSearchTerm] = useState("");
   const [editingProduct, setEditingProduct] = useState(null);
-
   const [newProduct, setNewProduct] = useState({
     name: "",
     sku: "",
@@ -59,21 +51,14 @@ function App() {
     quantity: "",
     status: "pending",
   });
-
-  // Sidebar quick list state
   const [sidebarOpenProducts, setSidebarOpenProducts] = useState(true);
   const [sidebarOpenSuppliers, setSidebarOpenSuppliers] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [selectedSupplierId, setSelectedSupplierId] = useState(null);
-
-  // open add flags
   const [openAddProduct, setOpenAddProduct] = useState(false);
   const [openAddSupplier, setOpenAddSupplier] = useState(false);
-
-  // NEW: mobile nav open state
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  // persist auth
   useEffect(() => {
     if (token) {
       localStorage.setItem("token", token);
@@ -86,14 +71,12 @@ function App() {
     }
   }, [token, username, role]);
 
-  // helper fetch with token
   const authFetch = (url, options = {}) => {
     const headers = options.headers ? { ...options.headers } : {};
     if (token) headers["Authorization"] = `Token ${token}`;
     return fetch(url, { ...options, headers });
   };
 
-  // load data when logged in
   useEffect(() => {
     if (!token) {
       setProducts([]);
@@ -144,10 +127,8 @@ function App() {
     };
 
     fetchAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // handle quick selection: open product
   useEffect(() => {
     if (selectedProductId == null) return;
     const p = products.find((x) => x.id === selectedProductId);
@@ -160,7 +141,6 @@ function App() {
     }
   }, [selectedProductId, products]);
 
-  // handle quick selection: supplier
   useEffect(() => {
     if (selectedSupplierId == null) return;
     const s = suppliers.find((x) => x.id === selectedSupplierId);
@@ -177,8 +157,6 @@ function App() {
       setMobileNavOpen(false);
     }
   }, [selectedSupplierId, suppliers]);
-
-  // stats
   const totalProducts = products.length;
   const totalSuppliers = suppliers.length;
   const lowStockCount = products.filter((p) => p.stock <= p.reorder_level).length;
@@ -187,8 +165,6 @@ function App() {
   const pendingOrders = orders.filter((o) => o.status === "pending").length;
   const completedOrders = orders.filter((o) => o.status === "completed").length;
   const cancelledOrders = orders.filter((o) => o.status === "cancelled").length;
-
-  /* ---------------- PRODUCT HANDLERS ---------------- */
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
@@ -298,8 +274,6 @@ function App() {
     }
   };
 
-  /* ---------------- SUPPLIER HANDLERS ---------------- */
-
   const handleAddSupplier = async (e) => {
     e.preventDefault();
     setError("");
@@ -363,8 +337,6 @@ function App() {
     }
   };
 
-  /* ---------------- ORDER HANDLERS ---------------- */
-
   const handleAddOrder = async (e) => {
     e.preventDefault();
     setError("");
@@ -407,8 +379,6 @@ function App() {
     }
   };
 
-  /* ---------------- LOGOUT ---------------- */
-
   const handleLogout = async () => {
     try {
       if (token) {
@@ -428,22 +398,16 @@ function App() {
     }
   };
 
-  /* ---------------- UTIL: change tab + close mobile nav ---------------- */
-
   const goToTab = (tab) => {
     setActiveTab(tab);
     setMobileNavOpen(false);
   };
-
-  /* ---------------- FILTERED PRODUCTS ---------------- */
 
   const filteredProducts = products.filter(
     (p) =>
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.sku.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  /* ---------------- AUTH GATE ---------------- */
 
   if (!isAuthenticated) {
     return (
@@ -469,11 +433,8 @@ function App() {
     );
   }
 
-  /* ---------------- MAIN LAYOUT (LOGGED IN) ---------------- */
-
   return (
     <div className={`app ${theme}`}>
-      {/* Desktop Sidebar */}
       <aside className="sidebar">
         <h1 className="logo">
           Inventory<span>Pro</span>
@@ -515,7 +476,6 @@ function App() {
                 ＋ Add product
               </button>
 
-              {/* QUICK PRODUCTS LIST */}
               <div className="sidebar-list">
                 <div
                   className="sidebar-list-header"
@@ -582,7 +542,6 @@ function App() {
                 ＋ Add supplier
               </button>
 
-              {/* QUICK SUPPLIERS LIST */}
               <div className="sidebar-list">
                 <div
                   className="sidebar-list-header"
@@ -648,7 +607,7 @@ function App() {
         </nav>
       </aside>
 
-      {/* Main */}
+
       <main className="main">
         <Navbar
           username={username || "User"}
@@ -659,8 +618,6 @@ function App() {
           onProfileClick={() => goToTab("profile")}
           onToggleMobileNav={() => setMobileNavOpen((o) => !o)}
         />
-
-        {/* MOBILE NAV OVERLAY + PANEL */}
         {mobileNavOpen && (
           <div
             style={{
@@ -883,19 +840,13 @@ function App() {
     </div>
   );
 }
-
-/* ---------------- LOGIN FORM ---------------- */
-
 function LoginForm({ setToken, setUsername, setRole, setError }) {
   const [usernameInput, setUsernameInput] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // Role selector
   const [selectedRole, setSelectedRole] = useState("User");
-  // Admin key (only when registering as Admin)
   const [adminKey, setAdminKey] = useState("");
 
   const handleSubmit = async (e) => {
@@ -1047,8 +998,6 @@ function LoginForm({ setToken, setUsername, setRole, setError }) {
   );
 }
 
-/* ---------------- NAVBAR ---------------- */
-
 function Navbar({
   username,
   role,
@@ -1064,7 +1013,6 @@ function Navbar({
   return (
     <header className="navbar">
       <div className="navbar-left" style={{ display: "flex", gap: 8, alignItems: "center" }}>
-        {/* Hamburger – always visible, but most useful on mobile */}
         <button
           onClick={onToggleMobileNav}
           style={{
@@ -1132,8 +1080,6 @@ function Navbar({
     </header>
   );
 }
-
-/* ---------------- OVERVIEW ---------------- */
 
 function Overview({
   products,
@@ -1273,8 +1219,6 @@ function SummaryCard({ label, value, highlight }) {
     </div>
   );
 }
-
-/* ---------------- PRODUCTS TAB ---------------- */
 
 function ProductsTab({
   products,
@@ -1539,8 +1483,6 @@ function ProductsTab({
   );
 }
 
-/* ---------------- SUPPLIERS TAB ---------------- */
-
 function SuppliersTab({
   suppliers,
   newSupplier,
@@ -1668,8 +1610,6 @@ function SuppliersTab({
   );
 }
 
-/* ---------------- ORDERS TAB ---------------- */
-
 function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) {
   return (
     <div className="split">
@@ -1784,8 +1724,6 @@ function OrdersTab({ orders, products, newOrder, setNewOrder, handleAddOrder }) 
     </div>
   );
 }
-
-/* ---------------- PROFILE ---------------- */
 
 function ProfileTab({ authFetch }) {
   const [profile, setProfile] = useState({
@@ -1934,8 +1872,6 @@ function ProfileTab({ authFetch }) {
   );
 }
 
-/* ---------------- USERS ---------------- */
-
 function UsersTab({ authFetch }) {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState("");
@@ -1996,8 +1932,6 @@ function UsersTab({ authFetch }) {
     </div>
   );
 }
-
-/* ---------------- RECENT ACTIVITY ---------------- */
 
 function RecentActivity({ products, orders, suppliers }) {
   return (
